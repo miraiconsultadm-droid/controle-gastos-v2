@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, gte, lte, inArray, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, movimentacoes, rubricas } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -85,4 +85,73 @@ export async function getUser(id: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+/**
+ * Buscar movimentacoes do Supabase
+ */
+export async function getMovimentacoesFromSupabase() {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://ozupsbdusywukrteefqc.supabase.co";
+  const supabaseKey = process.env.VITE_SUPABASE_KEY || "";
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("[Sync] Supabase credentials not configured");
+    return [];
+  }
+
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from("dmovimentacoes")
+      .select("*")
+      .order("data", { ascending: false });
+
+    if (error) {
+      console.error("[Sync] Error fetching from Supabase:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("[Sync] Error syncing from Supabase:", error);
+    return [];
+  }
+}
+
+/**
+ * Buscar rubricas unicas do Supabase
+ */
+export async function getRubricasFromSupabase() {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://ozupsbdusywukrteefqc.supabase.co";
+  const supabaseKey = process.env.VITE_SUPABASE_KEY || "";
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("[Sync] Supabase credentials not configured");
+    return [];
+  }
+
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from("dmovimentacoes")
+      .select("rubrica")
+      .order("rubrica", { ascending: true });
+
+    if (error) {
+      console.error("[Sync] Error fetching rubricas from Supabase:", error);
+      return [];
+    }
+
+    const rubricas = Array.from(new Set(
+      (data || []).map((r: any) => r.rubrica).filter(Boolean)
+    ));
+
+    return rubricas;
+  } catch (error) {
+    console.error("[Sync] Error fetching rubricas from Supabase:", error);
+    return [];
+  }
+}
+
