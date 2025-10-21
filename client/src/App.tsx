@@ -7,10 +7,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { GlobalFiltersProvider } from "./contexts/GlobalFiltersContext";
 import Dashboard from "./pages/Dashboard";
 import Detalhes from "./pages/Detalhes";
-import Tendencias from "./pages/Tendencias";
 import Comparativos from "./pages/Comparativos";
-import CadastroMovimentacao from "./pages/CadastroMovimentacao";
-import CadastroRubrica from "./pages/CadastroRubrica";
+import GlobalFilters from "./components/GlobalFilters";
 import { BarChart3, Plus, Tag, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -104,47 +102,15 @@ function Navigation() {
 }
 
 function Router() {
-  const [rubricas, setRubricas] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchRubricas = async () => {
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ozupsbdusywukrteefqc.supabase.co";
-        const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || "";
-
-        if (!supabaseUrl || !supabaseKey) return;
-
-        const { createClient } = await import("@supabase/supabase-js");
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        const { data } = await supabase
-          .from("dmovimentacoes")
-          .select("rubrica")
-          .order("rubrica", { ascending: true });
-
-        const uniqueRubricas = Array.from(
-          new Set((data || []).map((m: any) => m.rubrica).filter(Boolean))
-        ).sort();
-        setRubricas(uniqueRubricas as string[]);
-      } catch (error) {
-        console.error("Error fetching rubricas:", error);
-      }
-    };
-
-    fetchRubricas();
-  }, []);
-
   return (
     <GlobalFiltersProvider>
       <>
         <Navigation />
+        <GlobalFilters />
         <Switch>
-          <Route path={"/"} component={() => <Dashboard rubricas={rubricas} />} />
-          <Route path={"/tendencias"} component={() => <Tendencias rubricas={rubricas} />} />
-          <Route path={"/comparativos"} component={() => <Comparativos rubricas={rubricas} />} />
-          <Route path={"/detalhes"} component={() => <Detalhes rubricas={rubricas} />} />
-          <Route path={"/cadastro-movimentacao"} component={CadastroMovimentacao} />
-          <Route path={"/cadastro-rubrica"} component={CadastroRubrica} />
+          <Route path={"/"} component={Dashboard} />
+          <Route path={"/comparativos"} component={Comparativos} />
+          <Route path={"/detalhes"} component={Detalhes} />
           <Route path={"/404"} component={NotFound} />
           <Route component={NotFound} />
         </Switch>
