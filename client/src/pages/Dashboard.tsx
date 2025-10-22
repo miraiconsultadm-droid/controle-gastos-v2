@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import GlobalFilters from "@/components/GlobalFilters";
 import { Card } from "@/components/ui/card";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from "recharts";
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { DollarSign, TrendingUp, Zap, Target } from "lucide-react";
 
 interface DashboardProps {
@@ -79,24 +79,31 @@ export default function Dashboard({ rubricas }: DashboardProps) {
     return acc;
   }, {});
 
-  // Agrupar por mês para gráfico
-  const monthlyData = movements.reduce((acc: Record<string, Record<string, number>>, m) => {
+  // Agrupar por mês para gráfico de evolução (Receita, Despesa, Saldo)
+  const monthlyEvolution = movements.reduce((acc: Record<string, { receita: number; despesa: number }>, m) => {
     const date = new Date(m.data);
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
     if (!acc[monthKey]) {
-      acc[monthKey] = {};
+      acc[monthKey] = { receita: 0, despesa: 0 };
     }
 
-    acc[monthKey][m.rubrica] = (acc[monthKey][m.rubrica] || 0) + m.valor;
+    if (m.rubrica?.startsWith("2")) {
+      acc[monthKey].despesa += m.valor;
+    } else {
+      acc[monthKey].receita += m.valor;
+    }
+
     return acc;
   }, {});
 
-  const chartData = Object.entries(monthlyData)
+  const chartData = Object.entries(monthlyEvolution)
     .sort()
     .map(([month, data]) => ({
       month: new Date(month + "-01").toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
-      ...data,
+      receita: data.receita,
+      despesa: data.despesa,
+      saldo: data.receita + data.despesa,
     }));
 
   return (
@@ -162,9 +169,9 @@ export default function Dashboard({ rubricas }: DashboardProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Evolução Mensal */}
           <Card className="bg-slate-800 border-slate-700 p-6">
-            <h2 className="text-xl font-bold text-white mb-6">Evolução Mensal</h2>
+            <h2 className="text-xl font-bold text-white mb-6">Evolução Mensal (Receita, Despesa e Saldo)</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
+              <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
                 <XAxis dataKey="month" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
@@ -176,10 +183,10 @@ export default function Dashboard({ rubricas }: DashboardProps) {
                   }
                 />
                 <Legend />
-                {rubricas.slice(0, 5).map((rubrica, idx) => (
-                  <Bar key={rubrica} dataKey={rubrica} fill={["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"][idx]} />
-                ))}
-              </BarChart>
+                <Bar dataKey="saldo" fill="#3b82f6" name="Saldo" />
+                <Line type="monotone" dataKey="receita" stroke="#10b981" name="Receita" strokeWidth={2} />
+                <Line type="monotone" dataKey="despesa" stroke="#ef4444" name="Despesa" strokeWidth={2} />
+              </ComposedChart>
             </ResponsiveContainer>
           </Card>
 
