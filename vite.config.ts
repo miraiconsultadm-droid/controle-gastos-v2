@@ -7,6 +7,8 @@ import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 
+// Ensure environment variables are loaded
+const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env.local";
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
 
 export default defineConfig({
@@ -19,11 +21,13 @@ export default defineConfig({
     },
   },
   envDir: path.resolve(import.meta.dirname),
+  envPrefix: "VITE_",
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    minify: "terser",
   },
   server: {
     host: true,
@@ -35,6 +39,8 @@ export default defineConfig({
       ".manusvm.computer",
       "localhost",
       "127.0.0.1",
+      ".railway.app",
+      ".vercel.app",
     ],
     fs: {
       strict: true,
