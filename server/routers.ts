@@ -17,12 +17,34 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  movimentacoes: router({
+    getRubricas: publicProcedure.query(async () => {
+      try {
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://ozupsbdusywukrteefqc.supabase.co";
+        const supabaseKey = process.env.VITE_SUPABASE_KEY || "";
+
+        if (!supabaseUrl || !supabaseKey) {
+          return [];
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const { data } = await supabase
+          .from("dmovimentacoes")
+          .select("rubrica")
+          .order("rubrica", { ascending: true });
+
+        const uniqueRubricas = Array.from(
+          new Set((data || []).map((m: any) => m.rubrica).filter(Boolean))
+        ).sort();
+        return uniqueRubricas as string[];
+      } catch (error) {
+        console.error("Error fetching rubricas:", error);
+        return [];
+      }
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
+

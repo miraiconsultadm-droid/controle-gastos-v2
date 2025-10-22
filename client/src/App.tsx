@@ -12,7 +12,7 @@ import Comparativos from "./pages/Comparativos";
 import CadastroMovimentacao from "./pages/CadastroMovimentacao";
 import CadastroRubrica from "./pages/CadastroRubrica";
 import { BarChart3, Plus, Tag, TrendingUp } from "lucide-react";
-import { useState, useEffect } from "react";
+import { trpc } from "./lib/trpc";
 
 function Navigation() {
   const [location] = useLocation();
@@ -104,35 +104,7 @@ function Navigation() {
 }
 
 function Router() {
-  const [rubricas, setRubricas] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchRubricas = async () => {
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ozupsbdusywukrteefqc.supabase.co";
-        const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || "";
-
-        if (!supabaseUrl || !supabaseKey) return;
-
-        const { createClient } = await import("@supabase/supabase-js");
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        const { data } = await supabase
-          .from("dmovimentacoes")
-          .select("rubrica")
-          .order("rubrica", { ascending: true });
-
-        const uniqueRubricas = Array.from(
-          new Set((data || []).map((m: any) => m.rubrica).filter(Boolean))
-        ).sort();
-        setRubricas(uniqueRubricas as string[]);
-      } catch (error) {
-        console.error("Error fetching rubricas:", error);
-      }
-    };
-
-    fetchRubricas();
-  }, []);
+  const { data: rubricas = [] } = trpc.movimentacoes.getRubricas.useQuery();
 
   return (
     <GlobalFiltersProvider>
