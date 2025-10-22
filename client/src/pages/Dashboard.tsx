@@ -60,18 +60,24 @@ export default function Dashboard({ rubricas }: DashboardProps) {
     }
   };
 
-  // Calcular KPIs
-  const totalGastos = movements.reduce((sum, m) => sum + m.valor, 0);
-  const qtdLancamentos = movements.length;
-  const ticketMedio = qtdLancamentos > 0 ? totalGastos / qtdLancamentos : 0;
+  // Calcular Receita, Despesa e Saldo
+  // Receita: rubricas que NÃO começam com 2
+  // Despesa: rubricas que começam com 2
+  const receita = movements
+    .filter((m) => !m.rubrica?.startsWith("2"))
+    .reduce((sum, m) => sum + m.valor, 0);
+
+  const despesa = movements
+    .filter((m) => m.rubrica?.startsWith("2"))
+    .reduce((sum, m) => sum + m.valor, 0);
+
+  const saldo = receita + despesa;
 
   // Agrupar por rubrica
   const rubricaTotals = movements.reduce((acc: Record<string, number>, m) => {
     acc[m.rubrica] = (acc[m.rubrica] || 0) + m.valor;
     return acc;
   }, {});
-
-  const topRubrica = Object.entries(rubricaTotals).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
 
   // Agrupar por mês para gráfico
   const monthlyData = movements.reduce((acc: Record<string, Record<string, number>>, m) => {
@@ -105,42 +111,14 @@ export default function Dashboard({ rubricas }: DashboardProps) {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Gastos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Receita */}
           <Card className="bg-slate-800 border-slate-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-2">Total no Período</p>
-                <p className="text-3xl font-bold text-white">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGastos)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-blue-400" size={24} />
-              </div>
-            </div>
-          </Card>
-
-          {/* Qtd Lançamentos */}
-          <Card className="bg-slate-800 border-slate-700 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-medium mb-2">Lançamentos</p>
-                <p className="text-3xl font-bold text-white">{qtdLancamentos}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center">
-                <Zap className="text-purple-400" size={24} />
-              </div>
-            </div>
-          </Card>
-
-          {/* Ticket Médio */}
-          <Card className="bg-slate-800 border-slate-700 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-medium mb-2">Ticket Médio</p>
-                <p className="text-3xl font-bold text-white">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(ticketMedio)}
+                <p className="text-slate-400 text-sm font-medium mb-2">Receita</p>
+                <p className="text-3xl font-bold text-green-400">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(receita)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center">
@@ -149,18 +127,32 @@ export default function Dashboard({ rubricas }: DashboardProps) {
             </div>
           </Card>
 
-          {/* Top Rubrica */}
+          {/* Despesa */}
           <Card className="bg-slate-800 border-slate-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-2">Top Rubrica</p>
-                <p className="text-2xl font-bold text-white">{topRubrica?.[0] || "-"}</p>
-                <p className="text-slate-400 text-sm mt-1">
-                  {topRubrica ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(topRubrica[1]) : "N/A"}
+                <p className="text-slate-400 text-sm font-medium mb-2">Despesa</p>
+                <p className="text-3xl font-bold text-red-400">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(despesa)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
-                <Target className="text-orange-400" size={24} />
+              <div className="w-12 h-12 bg-red-600/20 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-red-400" size={24} />
+              </div>
+            </div>
+          </Card>
+
+          {/* Saldo */}
+          <Card className="bg-slate-800 border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm font-medium mb-2">Saldo</p>
+                <p className={`text-3xl font-bold ${saldo >= 0 ? "text-blue-400" : "text-red-400"}`}>
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(saldo)}
+                </p>
+              </div>
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${saldo >= 0 ? "bg-blue-600/20" : "bg-red-600/20"}`}>
+                <DollarSign className={saldo >= 0 ? "text-blue-400" : "text-red-400"} size={24} />
               </div>
             </div>
           </Card>

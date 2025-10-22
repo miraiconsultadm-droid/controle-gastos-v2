@@ -14,14 +14,16 @@ interface Movement {
   valor: number;
 }
 
+const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 export default function Comparativos({ rubricas }: ComparativosProps) {
-  const { selectedRubricas, startDate, endDate, compareMode } = useGlobalFilters();
+  const { selectedRubricas, startDate, endDate } = useGlobalFilters();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchMovements();
-  }, [selectedRubricas, startDate, endDate, compareMode]);
+  }, [selectedRubricas, startDate, endDate]);
 
   const fetchMovements = async () => {
     try {
@@ -59,36 +61,38 @@ export default function Comparativos({ rubricas }: ComparativosProps) {
     }
   };
 
-  // Agrupar por mês e rubrica
-  const monthlyData = movements.reduce((acc: Record<string, Record<string, number>>, m) => {
-    const date = new Date(m.data);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  // Agrupar por mês e ano
+  const monthlyByYear: Record<number, Record<number, number>> = {};
 
-    if (!acc[monthKey]) {
-      acc[monthKey] = {};
+  movements.forEach((m) => {
+    const date = new Date(m.data);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    if (!monthlyByYear[year]) {
+      monthlyByYear[year] = {};
     }
 
-    acc[monthKey][m.rubrica] = (acc[monthKey][m.rubrica] || 0) + m.valor;
-    return acc;
-  }, {});
+    monthlyByYear[year][month] = (monthlyByYear[year][month] || 0) + m.valor;
+  });
 
-  // Preparar dados para comparação
-  const chartData = Object.entries(monthlyData)
-    .sort()
-    .map(([month, data]) => ({
-      month: new Date(month + "-01").toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
-      ...data,
-    }));
+  // Preparar dados para o gráfico (visão mensal lado a lado)
+  const chartData = MONTHS.map((month, monthIdx) => {
+    const data: any = { month };
 
-  // Calcular top rubricas por período
-  const rubricaTotals = movements.reduce((acc: Record<string, number>, m) => {
-    acc[m.rubrica] = (acc[m.rubrica] || 0) + m.valor;
-    return acc;
-  }, {});
+    Object.entries(monthlyByYear).forEach(([year, months]) => {
+      data[year] = months[monthIdx] || 0;
+    });
 
-  const topRubricas = Object.entries(rubricaTotals)
-    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 10);
+    return data;
+  });
+
+  // Obter anos únicos
+  const yearsInData = Object.keys(monthlyByYear)
+    .map(Number)
+    .sort();
+
+  const colors = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4"];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -98,12 +102,12 @@ export default function Comparativos({ rubricas }: ComparativosProps) {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Comparativos</h1>
-          <p className="text-slate-400">Análise comparativa entre períodos (MoM/YoY)</p>
+          <p className="text-slate-400">Análise comparativa entre períodos (Ano a Ano)</p>
         </div>
 
-        {/* Gráfico Comparativo por Rubrica */}
-        <Card className="bg-slate-800 border-slate-700 p-6 mb-6">
-          <h2 className="text-xl font-bold text-white mb-6">Comparação por Rubrica</h2>
+        {/* Gráfico Comparativo Ano a Ano */}
+        <Card className="bg-slate-800 border-slate-700 p-6">
+          <h2 className="text-xl font-bold text-white mb-6">Comparação Mensal por Ano</h2>
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
@@ -117,37 +121,11 @@ export default function Comparativos({ rubricas }: ComparativosProps) {
                 }
               />
               <Legend />
-              {rubricas.slice(0, 5).map((rubrica, idx) => (
-                <Bar key={rubrica} dataKey={rubrica} fill={["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981"][idx]} />
+              {yearsInData.map((year, idx) => (
+                <Bar key={year} dataKey={year.toString()} fill={colors[idx % colors.length]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
-        </Card>
-
-        {/* Top Rubricas */}
-        <Card className="bg-slate-800 border-slate-700 p-6">
-          <h2 className="text-xl font-bold text-white mb-6">Top 10 Rubricas no Período</h2>
-          <div className="space-y-4">
-            {topRubricas.map(([rubrica, total], idx) => {
-              const percentage = (Math.abs(total) / Math.abs(topRubricas[0][1])) * 100;
-              return (
-                <div key={rubrica}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-300 font-medium">{idx + 1}. {rubrica}</span>
-                    <span className={`font-bold ${total < 0 ? "text-red-400" : "text-green-400"}`}>
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(total)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${total < 0 ? "bg-red-500" : "bg-green-500"}`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </Card>
       </div>
     </div>
