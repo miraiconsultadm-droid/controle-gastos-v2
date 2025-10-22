@@ -5,10 +5,19 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "rewrites": [
+  "functions": {
+    "server/_core/index.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/api/(.*)",
+      "dest": "/dist/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/client/index.html"
     }
   ]
 }
