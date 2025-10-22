@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import GlobalFilters from "@/components/GlobalFilters";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, ChevronUp, ChevronDown } from "lucide-react";
+
+interface DetalhesProps {
+  rubricas: string[];
+}
 
 interface Movement {
   id?: string;
@@ -19,8 +24,8 @@ interface Movement {
 type SortField = "data" | "rubrica" | "valor";
 type SortOrder = "asc" | "desc";
 
-export default function Detalhes() {
-  const { selectedMonths, selectedYears } = useGlobalFilters();
+export default function Detalhes({ rubricas }: DetalhesProps) {
+  const { selectedRubricas, startDate, endDate } = useGlobalFilters();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [filteredMovements, setFilteredMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,11 +35,11 @@ export default function Detalhes() {
 
   useEffect(() => {
     fetchMovements();
-  }, [selectedMonths, selectedYears]);
+  }, [selectedRubricas, startDate, endDate]);
 
   useEffect(() => {
     filterAndSortMovements();
-  }, [movements, searchTerm, sortField, sortOrder, selectedMonths, selectedYears]);
+  }, [movements, searchTerm, sortField, sortOrder, selectedRubricas, startDate, endDate]);
 
   const fetchMovements = async () => {
     try {
@@ -47,7 +52,12 @@ export default function Detalhes() {
       const { createClient } = await import("@supabase/supabase-js");
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const { data, error } = await supabase.from("dmovimentacoes").select("*");
+      let query = supabase.from("dmovimentacoes").select("*");
+
+      if (startDate) query = query.gte("data", startDate);
+      if (endDate) query = query.lte("data", endDate);
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching movements:", error);
@@ -65,18 +75,9 @@ export default function Detalhes() {
   const filterAndSortMovements = () => {
     let filtered = movements;
 
-    // Filtrar por mês e ano selecionados
-    if (selectedMonths.length > 0 || selectedYears.length > 0) {
-      filtered = filtered.filter((m) => {
-        const date = new Date(m.data);
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-
-        const monthMatch = selectedMonths.length === 0 || selectedMonths.includes(month);
-        const yearMatch = selectedYears.length === 0 || selectedYears.includes(year);
-
-        return monthMatch && yearMatch;
-      });
+    // Filtrar por rubricas selecionadas
+    if (selectedRubricas.length > 0) {
+      filtered = filtered.filter((m) => selectedRubricas.includes(m.rubrica));
     }
 
     // Filtrar por termo de busca
@@ -149,8 +150,10 @@ export default function Detalhes() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 pt-6">
-      <div className="max-w-7xl mx-auto px-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <GlobalFilters rubricas={rubricas} />
+
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Detalhes das Movimentações</h1>
