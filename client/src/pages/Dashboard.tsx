@@ -61,14 +61,14 @@ export default function Dashboard({ rubricas }: DashboardProps) {
   };
 
   // Calcular Receita, Despesa e Saldo
-  // Receita: rubricas que NÃO começam com 2
-  // Despesa: rubricas que começam com 2
+  // Receita: valores positivos
+  // Despesa: valores negativos
   const receita = movements
-    .filter((m) => !m.rubrica?.startsWith("2"))
+    .filter((m) => m.valor > 0)
     .reduce((sum, m) => sum + m.valor, 0);
 
   const despesa = movements
-    .filter((m) => m.rubrica?.startsWith("2"))
+    .filter((m) => m.valor < 0)
     .reduce((sum, m) => sum + m.valor, 0);
 
   const saldo = receita + despesa;
@@ -88,10 +88,10 @@ export default function Dashboard({ rubricas }: DashboardProps) {
       acc[monthKey] = { receita: 0, despesa: 0 };
     }
 
-    if (m.rubrica?.startsWith("2")) {
-      acc[monthKey].despesa += m.valor;
-    } else {
+    if (m.valor > 0) {
       acc[monthKey].receita += m.valor;
+    } else if (m.valor < 0) {
+      acc[monthKey].despesa += m.valor;
     }
 
     return acc;
